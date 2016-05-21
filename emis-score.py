@@ -1,15 +1,15 @@
 from io import BytesIO
-from blitzdb import Document, FileBackend
-from lxml import etree
 import random
 
+from blitzdb import Document, FileBackend
+from lxml import etree
 from PIL import Image
 import requests
 
 from exceptions import CaptchaIsNotNumberException
 import ocr
+from smsutils import BmobSmsUtils
 
-from smsutils import SmsUtils
 
 
 # EMIS_URL
@@ -42,7 +42,6 @@ MSG_BMOB_BIND_TIMES_COUNT = '绑定成功！你还能绑定{}个教务账号。'
 # Headers
 def gen_random_header():
     return {
-        # 'User-Agent': 'Googlebot/2.1 (+http://www.google.com/bot.html)',
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.0; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0',
         'X-Real-IP': '10.11.12.' + str(random.randint(1, 253)),
         'X-Forwarded-For': '222.223.233.' + str(random.randint(1, 253)),
@@ -127,26 +126,25 @@ if __name__ == '__main__':
     password = '940903'
     s = Session(username, password)
     status, message = s.login()
-    status = STATUS_SUCCESS
     if status == STATUS_SUCCESS:
         html = s.get(URL_TOTALSCORE)
         if html.content is not None:
             backend = FileBackend("./emis.db")
 
             selector = etree.HTML(html.content.decode('gbk'))
-            current_credit = str(selector.xpath(r'//*[@color="#FF0000"]/text()')[0])
-            credit = Score({'credit': current_credit, 'pk': username})
+            current_credit = int(selector.xpath(r'//*[@color="#FF0000"]/text()')[0])
+            credit = Score({'credit': current_credit})
 
             try:
-                saved_credit = backend.get(Score, {'pk': username})
+                saved_credit = backend.get(Score, {'credit': current_credit})
 
-                if credit.credit != saved_credit.credit:
+                if current_credit != '' and current_credit != int(saved_credit.credit):
                     credit.save(backend)
                     backend.commit()
-                    SmsUtils().send(['18395960722'])
+                    BmobSmsUtils().send_sms_template(['18395960722'], 'new_score')
                     print('Credit changed, SMS sent!')
                 else:
-                    print('Credit not changed: ' + credit.credit)
+                    print('Credit not changed: ' + str(current_credit))
             except Score.DoesNotExist:
                 credit.save(backend)
                 backend.commit()
