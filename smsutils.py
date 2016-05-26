@@ -76,7 +76,7 @@ class BmobSmsUtils(BaseSmsUtils):
                 'mobilePhoneNumber': each,
                 'template': template_name,
             }
-            rs.add(grequests.post(data=data, headers=headers))
+            rs.add(grequests.post(self.url, data=json.dumps(data), headers=headers))
         grequests.map(rs)
 
     def get_credentials(self):
