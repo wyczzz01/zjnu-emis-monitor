@@ -133,13 +133,14 @@ if __name__ == '__main__':
 
             selector = etree.HTML(html.content.decode('gbk'))
             current_credit = int(selector.xpath(r'//*[@color="#FF0000"]/text()')[0])
-            credit = Score({'credit': current_credit})
+            credit = Score({'credit': current_credit, 'pk': 1})
 
             try:
-                saved_credit = backend.get(Score, {'credit': current_credit})
+                saved_credit = backend.get(Score, {'pk': 1})
 
                 if current_credit != '' and current_credit != int(saved_credit.credit):
-                    credit.save(backend)
+                    saved_credit.credit = current_credit
+                    saved_credit.save(backend)
                     backend.commit()
                     BmobSmsUtils().send_sms_template(['18395960722'], 'new_score')
                     print('Credit changed, SMS sent!')
