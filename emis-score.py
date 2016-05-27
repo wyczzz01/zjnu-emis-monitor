@@ -122,6 +122,11 @@ class Session(requests.Session):
 
 if __name__ == '__main__':
 
+    def save_new_credit(data, pk=None):
+        new_credit = Score({'credit': data, 'pk': pk}) if pk else Score({'credit': data})
+        new_credit.save(backend)
+        backend.commit()
+
     username = '13211137'
     password = '940903'
     s = Session(username, password)
@@ -133,21 +138,23 @@ if __name__ == '__main__':
 
             selector = etree.HTML(html.content.decode('gbk'))
             current_credit = int(selector.xpath(r'//*[@color="#FF0000"]/text()')[0])
-            credit = Score({'credit': current_credit, 'pk': 1})
 
             try:
                 saved_credit = backend.get(Score, {'pk': 1})
 
-                if current_credit != '' and current_credit != int(saved_credit.credit):
-                    saved_credit.credit = current_credit
-                    saved_credit.save(backend)
-                    backend.commit()
-                    BmobSmsUtils().send_sms_template(['18395960722'], 'new_score')
-                    print('Credit changed, SMS sent!')
-                else:
-                    print('Credit not changed: ' + str(current_credit))
+                if current_credit != '':
+                    if current_credit > int(saved_credit.credit):
+                        saved_credit.credit = current_credit
+                        saved_credit.save(backend)
+                        backend.commit()
+                        BmobSmsUtils().send_sms_template(['18395960722'], 'new_score')
+                        print('Credit changed, SMS sent!')
+                    elif current_credit == int(saved_credit.credit):
+                        print('Credit not changed: ' + str(current_credit))
+                    else:
+                        save_new_credit(current_credit)
+                        print('Credit: ' + str(current_credit) + ' is smaller than before!')
             except Score.DoesNotExist:
-                credit.save(backend)
-                backend.commit()
+                save_new_credit(current_credit, pk=1)
                 print('New score created!')
             s.logout()
